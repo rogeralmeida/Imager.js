@@ -106,6 +106,25 @@
             }
         }
 
+        async function supportsWebp() {
+          if (!window.createImageBitmap) return false;
+          const webpData = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
+          const blob = await fetch(webpData).then(r => r.blob());
+          const result = await createImageBitmap(blob).then(() => true, () => false);
+          return result;
+        }
+
+        async function imageExtension() {
+          var supports = await supportsWebp()
+          if(supports) {
+            console.log('does support');
+            return 'webp';
+          }
+          else {
+            console.log('does not support');
+            return 'png';
+          }
+        }
         this.viewportHeight   = doc.documentElement.clientHeight;
         this.selector         = !elements ? (opts.selector || '.delayed-image-load') : null;
         this.className        = opts.className || 'image-replace';
@@ -147,9 +166,11 @@
         this.add(elements || this.selector);
         this.ready(opts.onReady);
 
-        setTimeout(function () {
-            self.init();
-        }, 0);
+        var me = this;
+        imageExtension().then((ext) => {
+          me.preferedImageFormat = ext; 
+          self.init();
+        });
     };
 
     Imager.prototype.add = function (elementsOrSelector) {
@@ -326,7 +347,7 @@
     Imager.prototype.replaceImagesBasedOnScreenDimensions = function (image) {
         var computedWidth, naturalWidth;
 
-	naturalWidth = Imager.getNaturalWidth(image);
+        naturalWidth = Imager.getNaturalWidth(image);
         computedWidth = typeof this.availableWidths === 'function' ? this.availableWidths(image)
                                                                    : this.determineAppropriateResolution(image);
 
@@ -359,8 +380,11 @@
     };
 
     Imager.prototype.changeImageSrcToUseNewImageDimensions = function (src, selectedWidth) {
+        var ext = this.preferedImageFormat;
+        console.log("About to replace: " + ext)
         return src
             .replace(/{width}/g, Imager.transforms.width(selectedWidth, this.widthsMap))
+            .replace(/{ext}/g, ext)
             .replace(/{pixel_ratio}/g, Imager.transforms.pixelRatio(this.devicePixelRatio));
     };
 
